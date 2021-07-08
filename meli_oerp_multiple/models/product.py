@@ -156,6 +156,8 @@ class product_template(models.Model):
                 meli_id_filter = []
                 if meli_id:
                     meli_id_filter = [( 'conn_id', '=', meli_id )]
+                else:
+                    meli_id_filter = [( 'conn_id', '=', None )]
                 pt_binds = self.env["mercadolibre.product_template"].search( [("product_tmpl_id","=",product.id),
                                                                              ("connection_account","=",account.id)]
                                                                              + meli_id_filter)

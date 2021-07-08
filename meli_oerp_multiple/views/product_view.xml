@@ -57,6 +57,12 @@
                       attrs="{'invisible':[('meli_category','!=',False)]}"
                       class="oe_stat_button"
                       icon="fa-refresh"/>
+                    <button name='product_template_unbind' type="object"
+                      string="Desvincular"
+                      title="Desvincular, elimina el vinculo en Odoo, no la publicacion de ML"
+                      confirm="¿Está seguro que quiere desvincular esta publicacion de Odoo de este producto?"
+                      class="oe_stat_button"
+                      icon="fa-close"/>
                   </div>
                 </group>
                 <!--separator string="Variants" colspan="1"/-->

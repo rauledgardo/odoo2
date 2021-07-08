@@ -592,6 +592,14 @@ class MercadoLibreConnectionBindingProductTemplate(models.Model):
 
         return {}
 
+    def product_template_unbind( self ):
+
+        for bindT in self:
+            product_template = bindT.product_tmpl_id
+            if product_template:
+                res = product_template.mercadolibre_unbind_from( account=bindT.connection_account, meli_id=bindT.conn_id )
+
+
     meli_variants_status = fields.Text(compute=product_template_stats,string='Meli Variant Status')
 
 class MercadoLibreConnectionBindingProductVariant(models.Model):
