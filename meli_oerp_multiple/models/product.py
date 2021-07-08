@@ -219,7 +219,7 @@ class product_template(models.Model):
                         bindT = productT.mercadolibre_bind_to( account=account, meli_id=meli_id, meli=meli, bind_variant=variant )
                         if bindT:
                             res = bindT.product_template_post( meli=meli, product_variant=variant )
-                            if 'name' in res:
+                            if res and 'name' in res:
                                 return res
 
             else:
@@ -227,7 +227,8 @@ class product_template(models.Model):
                 _logger.info("[PRODUCT.TEMPLATE] >> product_template_post > repost all bindings: " +str(productT.mercadolibre_bindings.mapped('conn_id')) )
                 for bindT in productT.mercadolibre_bindings:
                     res = bindT.product_template_post( meli=meli )
-                    if 'name' in res:
+                    _logger.info("bindT.product_template_post res: "+str(res))
+                    if res and 'name' in res:
                         return res
 
         return res
@@ -1897,6 +1898,61 @@ class product_product(models.Model):
             product.meli_permalink = ML_permalink
             product.meli_state = ML_state
 
+    def x_match_variation_id( self, meli=None, meli_id=None, meli_id_variation=None, product_sku=None ):
+        #return  same variation id existing matched with sku, or first matched with sku
+        target_meli_id_variation = None
+        productjson = self.env["mercadolibre.account"].fetch_meli_product( meli_id=meli_id, meli=meli )
+        if ( productjson and "variations" in productjson and len(productjson["variations"]) ):
+            #varias = {
+            #    "variations": []
+            #}
+            _logger.info("product_post_stock > Update variations stock")
+            found_comb = False
+            #pictures_v = []
+            #same_price = False
+            #TODO: check combination now based on SKU and forget!!
+            for ix in range(len(productjson["variations"]) ):
+                vr = productjson["variations"][ix]
+                seller_sku = ("seller_sku" in vr and vr["seller_sku"]) or ("seller_custom_field" in vr and vr["seller_custom_field"])
+                #check if combination is related to this product
+                #if 'picture_ids' in productjson["variations"][ix]:
+                #    if (len(productjson["variations"][ix]["picture_ids"])>len(pictures_v)):
+                #        pictures_v = productjson["variations"][ix]["picture_ids"]
+                #same_price = productjson["variations"][ix]["price"]
+                #_logger.info(productjson["variations"][ix])
+                if (seller_sku==product_sku):# or self._is_product_combination(productjson["variations"][ix])):
+                    _logger.info("_is_product_combination! Post stock to variation")
+                    #_logger.info(productjson["variations"][ix])
+                    found_comb = True
+                    #reset meli_id_variation (TODO: resetting must be done outside)
+                    target_meli_id_variation = productjson["variations"][ix]["id"]
+                    #if target:
+                        #WARNING; will change the publication id variation?
+                    #    if (str(target.conn_variation_id)!=str(target_meli_id_variation)):
+                    #        reserror =  { "error": "Changing binding variant meli_id:"+str(target.conn_id)+" conn_id_variation: " + str(target.conn_variation_id) + " target_meli_id_variation: " + str(target_meli_id_variation) }
+                    #        _logger.error(reserror)
+                            #return reserror
+                    #    target.meli_id_variation = str(target_meli_id_variation)
+                    #    target.conn_variation_id = str(target_meli_id_variation)
+                    #var = {
+                        #"id": str( product.meli_id_variation ),
+                    #    "available_quantity": product.meli_available_quantity,
+                        #"picture_ids": ['806634-MLM28112717071_092018', '928808-MLM28112717068_092018', '643737-MLM28112717069_092018', '934652-MLM28112717070_092018']
+                    #}
+                    #varias["variations"].append(var)
+                    #_logger.info(varias)
+                    #_logger.info(var)
+                    #responsevar = meli.put("/items/"+str(meli_id)+'/variations/'+str( target_meli_id_variation ), var, {'access_token':meli.access_token})
+                    #_logger.info(responsevar.json())
+                    #if responsevar:
+                    #    rjson = responsevar.json()
+                    #    if rjson:
+                    #        if "error" in rjson:
+                    #            _logger.error(rjson)
+                    #            return rjson
+        return target_meli_id_variation
+
+
     def x_product_post_stock( self, context=None, meli=False, config=None, meli_id=None, meli_id_variation=None, target=None ):
         context = context or self.env.context
         #_logger.info("meli_oerp product_post_stock x_product_post_stock context: " + str(context))
@@ -2065,8 +2121,29 @@ class product_product(models.Model):
                             if (len(pjson["variations"])==1):
                                 meli_id_variation = pjson["variations"][0]["id"]
 
+                                if (target and target.conn_id==meli_id and target.meli_id==meli_id):
+                                    _logger.info("fix bind variant meli_id_variation: "+str(meli_id_variation))
+                                    target.conn_variation_id = meli_id_variation
+                                    target.meli_id_variation = meli_id_variation
+
+                                if (product.meli_id==meli_id and product.meli_id_variation != meli_id_variation):
+                                    _logger.info("fix product meli_id_variation: "+str(meli_id_variation))
+                                    product.meli_id_variation = meli_id_variation
+
                 if (meli_id_variation):
-                    #_logger.info("Posting using product.meli_id_variation")
+                    _logger.info("Posting using product.meli_id_variation")
+                    #check if variation id exists in target
+                    response = meli.get("/items/%s/variation/%s" % (meli_id,meli_id_variation), {'access_token':meli.access_token})
+                    if (response):
+                        pjson = response.json()
+                        if "error" in pjson:
+                            fix_meli_id_variation = self.x_match_variation_id(meli=meli, meli_id=meli_id, meli_id_variation=meli_id_variation, product_sku=product.default_code )
+                            if not fix_meli_id_variation:
+                                verror = { "error": "Variation id not found for sku %s in (%s,%s) " % (str(product.default_code), meli_id, meli_id_variation ) }
+                                _logger.error(verror)
+                                return verror
+
+                            meli_id_variation = fix_meli_id_variation
                     var = {
                         #"id": str( product.meli_id_variation ),
                         "available_quantity": product.meli_available_quantity,
@@ -2080,6 +2157,7 @@ class product_product(models.Model):
                             if ('available_quantity' in rjson):
                                 _logger.info( "Posted ok:" + str(rjson['available_quantity']) )
                             if "error" in rjson:
+                                _logger.error(rjson)
                                 return rjson
                 else:
                     response = meli.put("/items/"+meli_id, fields, {'access_token':meli.access_token})
@@ -2088,6 +2166,7 @@ class product_product(models.Model):
                         if ('available_quantity' in rjson):
                             _logger.info( "Posted ok:" + str(rjson['available_quantity']) )
                         if "error" in rjson:
+                            _logger.error(rjson)
                             return rjson
 
                 if (product.meli_available_quantity<=0 and product.meli_status=="active"):

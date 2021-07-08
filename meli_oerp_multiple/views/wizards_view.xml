@@ -274,6 +274,52 @@
               binding_views="list,form"
               target="new"/>
 
+      <!-- SALE ORDER -->
+      <!-- View wizard FORM  - Sale Order Create Global Invoice-->
+      <record id="view_sale_order_global_invoice_meli_wiz" model="ir.ui.view">
+            <field name="name">Global Invoice</field>
+            <field name="model">sale.order.global.invoice.meli.wiz</field>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+              <form string="Global Invoice" version="7.0">
+                  <h2>Choose Invoice or Leave Blank To Create New Invoice</h2>
+                  <group>
+                    <group>
+                      <field name="connection_account"/>
+                      <field name="journal_id" invisible="0"/>
+                      <br/>
+                      <field name="partner_id" invisible="0"/>
+                      <field name="account_id" invisible="0"/>
+                      <br/>
+                      <field name="invoice"/>
+                    </group>
+                  </group>
+                  <footer>
+                      <button name="create_sale_order_global_invoice" string="Add to Global Invoice"  type="object" class="oe_highlight"  />
+                        <button string="Cancel" class="oe_link" special="cancel" />
+                  </footer>
+              </form>
+            </field>
+      </record>
+      <!-- Action wizard - Add to Connector: MercadoLibre-->
+      <record id="action_sale_order_global_invoice_meli_wiz" model="ir.actions.act_window">
+          <field name="name">Create Global Invoice</field>
+          <field name="type">ir.actions.act_window</field>
+          <!--field name="src_model">product.product</field-->
+          <field name="res_model">sale.order.global.invoice.meli.wiz</field>
+          <!--field name="view_type">form</field-->
+          <field name="view_mode">form</field>
+          <field name="target">new</field>
+      </record>
+      <act_window id="action_sale_order_global_invoice_meli_wiz"
+          name="Create Global Invoice"
+          binding_model="sale.order"
+          res_model="sale.order.global.invoice.meli.wiz"
+          view_id="view_sale_order_global_invoice_meli_wiz"
+          view_mode="form"
+          binding_views="list,form"
+          target="new"/>
+      
 
     </data>
 </odoo>

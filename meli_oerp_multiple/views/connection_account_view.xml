@@ -353,6 +353,7 @@
                     <field name="mercadolibre_process_payments_supplier_shipment" invisible="0"/>
                   </group>
                   <group>
+                    <field name="mercadolibre_invoice_journal_id" invisible="0"/>
                     <field name="mercadolibre_order_confirmation_invoice" invisible="0"/>
                   </group>
                   <group>

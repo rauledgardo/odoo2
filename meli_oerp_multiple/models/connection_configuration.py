@@ -178,10 +178,16 @@ class MercadoLibreConnectionConfiguration(models.Model):
                                                 string='(FULL) Acción al confirmar un pedido',
                                                 help='(FULL) Acción al confirmar una orden o pedido de venta')
 
+    #TODO: process shippings
+    mercadolibre_stock_filter_order_datetime = fields.Datetime("Order Closed Date (For shipping)")
+    mercadolibre_stock_filter_order_datetime_to = fields.Datetime("Order Closed Date To (For shipping)")
+
+
     #TODO: activate
     mercadolibre_stock_virtual_available = fields.Selection([("virtual","Virtual (quantity-reserved)"),("theoretical","En mano (quantity)")],default='virtual')
 
     mercadolibre_stock_sku_mapping = fields.Many2many("meli_oerp.sku.rule",string="Sku Rules")
+
 
 
 
@@ -219,6 +225,7 @@ class MercadoLibreConnectionConfiguration(models.Model):
     mercadolibre_post_invoice = fields.Boolean(string="Post Invoice Automatic",help="Try to post invoice, when order is revisited or refreshed.")
     mercadolibre_post_invoice_dont_send = fields.Boolean(string="Dont really send, just prepare to post invoice.")
 
+    mercadolibre_invoice_journal_id = fields.Many2one( "account.journal", string="Diario Facturacion" )
 
     def copy_from_company( self, context=None, company=None ):
         context = context or self.env.context
