@@ -324,6 +324,9 @@ class SaleOrderGlobalInvoice(models.TransientModel):
     partner_id = fields.Many2one( "res.partner", string="Cliente", help="Debe seleccionar un cliente", required=True )
     account_id = fields.Many2one( "account.account", string='Cuenta', help="Cuenta" )
     invoice = fields.Many2one( "account.move", string='Existing draft invoice',help='si quiere seguir agregando lineas a una factura global existente')
+    total = fields.Selection( [('amount_total','Total Odoo'),('meli_total_amount','Total Amount'),('meli_paid_amount','Paid Amount')], string="Total Amount",  ) 
+    update_order = fields.Boolean( string="Actualizar orden", default=False )
+    fix = fields.Boolean( string="Reprocesar", default=False )
 
     def create_sale_order_global_invoice( self, context=None ):
 
@@ -384,6 +387,14 @@ class SaleOrderGlobalInvoice(models.TransientModel):
             if not invoice:
                 raise UserError('Error, invoice couldnt be created or found.')
 
+            orders_ids_fix = []
+            if self.fix and invoice and invoice.invoice_line_ids:
+                for iline in invoice.invoice_line_ids:
+                    order = orders_obj.search([('name','=',iline.name)], limit=1)
+                    if order:
+                        orders_ids_fix.append(order.id)
+                        orders_ids.append(order.id)
+
             for order_id in orders_ids:
 
                 _logger.info("Adding order to invoice: %s " % (order_id) )
@@ -391,7 +402,18 @@ class SaleOrderGlobalInvoice(models.TransientModel):
                 order = orders_obj.browse(order_id)
                 
                 if order:
+                    #check meli_status_brief to update
+                    #mstatus = order.meli_status_brief
+                    self.update_order and order.meli_orders and order.meli_orders[0].orders_update_order()
                     
+                    total_amount = order.meli_total_amount or order.amount_total
+                    if self.total == 'amount_total':
+                        total_amount = order.amount_total or total_amount
+                    if self.total == 'meli_total_amount':
+                        total_amount = order.meli_total_amount or total_amount
+                    if self.total == 'meli_paid_amount':
+                        total_amount = order.meli_paid_amount or total_amount
+                        
                     #search order id or name
                     ifields = {
                         'account_id': (account_id and account_id.id) or invoice.journal_id.default_account_id.id,
@@ -401,7 +423,10 @@ class SaleOrderGlobalInvoice(models.TransientModel):
                         'quantity': 1,
                         'discount': 0,
                         'name': ''+str(order.name),
-                        'price_unit': order.meli_total_amount or order.amount_total,
+                        'meli_sale_name': ''+str(order.name),
+                        'meli_sale_id': order.id,
+                        'price_unit': total_amount,
+                        'tax_ids': [(6, 0, product_vml.taxes_id.ids)],
                         #'credit': order.meli_total_amount,
                         #'debit': order.meli_total_amount,
                         #'amount_currency': order.meli_total_amount
@@ -426,12 +451,16 @@ class SaleOrderGlobalInvoice(models.TransientModel):
                                                             ( 'product_id', '=', product_vml.id ),
                                                             ( 'move_id', '=', invoice.id ),
                                                             ( 'name', '=', ifields['name'] )
-                                                            ])
+                                                            ], limit=1)
                     if not inline:
                         #inline = self.env["account.move.line"].create( ifields )
-                        inv_fields["invoice_line_ids"].append( (0,0, ifields ) )                        
+                        inv_fields["invoice_line_ids"].append( (0,0, ifields ) )
+                        for oli in order.order_line:
+                            oli.qty_invoiced = oli.qty_to_invoice
+                            oli.invoice_status = "invoiced"
+                        order.invoice_status = "invoiced"
                     else:
-                        #inline.write(ifields)
+                        #inv_fields["invoice_line_ids"].append( (0,0, ifields ) )
                         pass
                         
                     
@@ -447,3 +476,52 @@ class SaleOrderGlobalInvoice(models.TransientModel):
             raise e
 
         return {}
+
+class NotificationsProcessWiz(models.TransientModel):
+    _name = "mercadolibre.notification.wiz"
+    _description = "MercadoLibre Notifications Wiz"
+
+    connection_account = fields.Many2one( "mercadolibre.account", string='MercadoLibre Account',help="Cuenta de mercadolibre origen de la publicación")
+    
+    def process_notifications( self, context=None ):
+
+        context = context or self.env.context
+
+        _logger.info("process_notifications (MercadoLibre)")
+        noti_ids = ('active_ids' in context and context['active_ids']) or []
+        noti_obj = self.env['mercadolibre.notification']
+        
+        try:
+            meli = None
+            if self.connection_account:
+                meli = self.env['meli.util'].get_new_instance( self.connection_account.company_id, self.connection_account )
+                if meli.need_login():
+                    return meli.redirect_login()
+            
+            ##if not self.connection_account:
+            #    raise UserError('Connection Account not defined!')
+            for noti_id in noti_ids:
+
+                _logger.info("Processing notification: %s " % (noti_id) )
+
+                noti = noti_obj.browse(noti_id)
+                ret = []
+                if noti:
+                    reti = None
+                    if self.connection_account and noti.connection_account and noti.connection_account.id==self.connection_account.id:
+                        reti = noti.process_notification(meli=meli)
+                    else:
+                        reti = noti.process_notification()
+                    if reti:
+                        ret.append(str(reti))
+                    
+        except Exception as e:
+            _logger.info("process_notifications > Error procesando notificacion")
+            _logger.error(e, exc_info=True)
+            _logger.error(str(ret))
+            #self._cr.rollback()
+            raise e
+            
+        _logger.info("Processing notification result: %s " % (str(ret)) )
+            
+            

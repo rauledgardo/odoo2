@@ -57,6 +57,12 @@
                       attrs="{'invisible':[('meli_category','!=',False)]}"
                       class="oe_stat_button"
                       icon="fa-refresh"/>
+                      <button name='product_template_rebind' type="object"
+                        string="Revincular"
+                        title="Revincular, actualiza los vinculos completos por variante"
+                        confirm="¿Está seguro que quiere revincular esta publicación?"
+                        class="oe_stat_button"
+                        icon="fa-refresh"/>
                     <button name='product_template_unbind' type="object"
                       string="Desvincular"
                       title="Desvincular, elimina el vinculo en Odoo, no la publicacion de ML"

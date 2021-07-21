@@ -143,7 +143,7 @@ class MercadoLibreOrder(models.Model):
         _logger.info("prepare_ml_order_vals (multiple) > order_fields:"+str(order_fields))
 
         return order_fields
-        
+
     def prepare_sale_order_vals( self, meli=None, order_json=None, config=None, sale_order=None, shipment=None ):
 
         meli_order_fields = super(MercadoLibreOrder, self).prepare_sale_order_vals(meli=meli, order_json=order_json, config=config,sale_order=sale_order, shipment=shipment)
@@ -161,7 +161,9 @@ class MercadoLibreOrder(models.Model):
 
     def search_meli_product( self, meli=None, meli_item=None, config=None ):
 
+        _logger.info("search_meli_product (multiple): "+str(meli_item))
         product_related = None
+        check_sku = False
         product_obj = self.env['product.product']
         binding_obj = self.env['mercadolibre.product']
 
@@ -197,6 +199,11 @@ class MercadoLibreOrder(models.Model):
         else:
             product_related = product_obj.search([('meli_id','=', meli_id)])
 
+        seller_sku = ('seller_sku' in meli_item and meli_item['seller_sku']) or ('seller_custom_field' in meli_item and meli_item['seller_custom_field'])
+        if check_sku and seller_sku and product_related and len(product_related)>0:
+            if ( str(seller_sku) != str(product_related and product_related[0].default_code)):
+                #force search by sku
+                product_related = []
 
         if ( len(product_related)==0 and ('seller_custom_field' in meli_item or 'seller_sku' in meli_item)):
 
@@ -283,6 +290,7 @@ class MercadoLibreOrder(models.Model):
                 if ('variation_attributes' in meli_item):
                     _logger.info("TODO: search by attributes")
 
+        _logger.info("search_meli_product (multiple) ended: "+str(meli_item))
         return product_related
 
     def orders_update_order( self, context=None, meli=None, config=None ):
@@ -364,6 +372,12 @@ class SaleOrderLine(models.Model):
     #here we must use Many2one more accurate, there is no reason to have more than one binding (more than one account and more than one item/order associated to one sale order line)
     mercadolibre_bindings = fields.Many2one( "mercadolibre.sale_order_line", string="MercadoLibre Connection Bindings" )
 
+class AccountMoveLine(models.Model):
+    _inherit = "account.move.line"
+
+    meli_sale_id = fields.Many2one("sale.order",string="Orden ML")
+    meli_sale_name = fields.Char(string="Label ML")
+
 class ResPartner(models.Model):
 
     _inherit = "res.partner"
@@ -373,11 +387,11 @@ class ResPartner(models.Model):
     mercadolibre_bindings = fields.Many2many( "mercadolibre.client", string="MercadoLibre Connection Bindings" )
 
 class mercadolibre_shipment(models.Model):
-    
+
     _inherit = "mercadolibre.shipment"
-    
+
     def shipment_print( self, meli=None, config=None, include_ready_to_print=None ):
-        
+
         shipment = self
         order = shipment.orders and shipment.orders[0]
         account = order and order.connection_account

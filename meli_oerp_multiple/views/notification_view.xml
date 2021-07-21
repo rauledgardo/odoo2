@@ -33,26 +33,13 @@
       <record id="mercadolibre_notifications_search_view" model="ir.ui.view">
   			<field name="name">MercadoLibre Notifications - Search</field>
   			<field name="model">mercadolibre.notification</field>
+			<field name="inherit_id" ref="meli_oerp.meli_notifications_search_view" />
   			<field name="arch" type="xml">
-  				<search  string="Search MercadoLibre Notifications Information">
-  					<field name="notification_id" />
-  					<field name="sent" />
-  					<field name="topic" />
-  					<field name="resource" />
-  					<field name="user_id" />
-  					<field name="state" />
-            <field name="processing_logs" />
-  					<filter string="Questions only"
-  						domain="[('topic', '=', 'questions')]"
-  						name="questions_filter" />
-  					<filter string="Today"
-  						domain="[('sent', '=', context_today().strftime('%Y-%m-%d'))]"
-  						name="today_filter" />
-  					<filter string='State' icon="terp-mrp" domain="[]"
-  							context="{'group_by' : 'state'}" name="state_filter"/>
-  					<filter string='Topic' domain="[]"
-  								context="{'group_by' : 'topic'}" name="topic_filter"/>
-  				</search>
+				<field name="state" position="after">
+					<field name="processing_logs" />
+					<filter string='ML Account' domain="[]"
+											context="{'group_by' : 'connection_account'}" name="ml_account_filter"/>
+				</field>
   			</field>
   		</record>
 

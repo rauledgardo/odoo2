@@ -220,7 +220,7 @@ class MercadoLibreConnectionNotification(models.Model):
                 _logger.info(ojson)
                 if ('error' in ojson):
                     noti.state = 'FAILED'
-                    noti.processing_errors = str(ojson['error'])
+                    noti.processing_errors = "Notification error:"+str(ojson)
                 if ("id" in ojson):
 
                     morder = self.env["mercadolibre.orders"].search( [('order_id','=',ojson["id"])], limit=1 )

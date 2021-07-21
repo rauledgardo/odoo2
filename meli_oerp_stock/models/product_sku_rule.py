@@ -123,6 +123,9 @@ class meli_oerp_sku_rule(models.Model):
     group = fields.Char(string="Group",help="Sku Regex Group",required=False)
     test = fields.Char(string="Test",help="Sku Regex Test",required=False)
 
+    security_virtual_stock_to_pause = fields.Float(string="Virtual Stock", default=False )
+    security_quantity_stock_to_pause = fields.Float(string="Quantity Stock", default=False )
+
     _sql_constraints = [
         ('unique_meli_oerp_sku_rule', 'unique(name)', 'Rule name already exists!')
     ]

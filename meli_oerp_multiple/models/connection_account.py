@@ -160,7 +160,7 @@ class MercadoLibreConnectionAccount(models.Model):
 
     def cron_meli_process( self ):
 
-        _logger.info('account cron_meli_process() ')
+        _logger.info( 'account cron_meli_process() STARTED ' + str( datetime.now() ) )
 
         for connacc in self:
 
@@ -192,6 +192,8 @@ class MercadoLibreConnectionAccount(models.Model):
                 _logger.info("config.mercadolibre_cron_post_update_price")
                 connacc.meli_update_remote_price(meli=apistate)
 
+
+        _logger.info( 'account cron_meli_process() ENDED ' + str( datetime.now() ) )
     #TODO: {
     #  "id": "GTIN",
     #  "name": "Código universal de producto",
@@ -815,7 +817,7 @@ class MercadoLibreConnectionAccount(models.Model):
 
     def meli_update_remote_stock(self, meli=False):
         account = self
-        _logger.info('account.meli_update_remote_stock() '+str(account.name))
+        _logger.info('account.meli_update_remote_stock() STARTED '+str(account.name) + " " +str( datetime.now() ))
         company = account.company_id or self.env.user.company_id
         config = account.configuration or company
 

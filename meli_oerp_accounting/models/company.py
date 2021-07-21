@@ -68,5 +68,7 @@ class ResCompany(models.Model):
     mercadolibre_post_invoice = fields.Boolean(string="Post Invoice Automatic",help="Try to post invoice, when order is revisited or refreshed.")
     mercadolibre_post_invoice_dont_send = fields.Boolean(string="Dont really send, just prepare to post invoice.")
 
+    mercadolibre_set_fully_invoice = fields.Boolean( string="Set Fully Invoice", help="Marcar como completamente facturado la orden correspondiente (incluido linea de envio)" )
+
     def hi(self):
         return True
