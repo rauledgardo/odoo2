@@ -172,26 +172,44 @@ class MercadoLibreOrder(models.Model):
 
         meli_id = meli_item['id']
         meli_id_variation = ("variation_id" in meli_item and meli_item['variation_id'])
-
+        seller_sku = ('seller_sku' in meli_item and meli_item['seller_sku']) or ('seller_custom_field' in meli_item and meli_item['seller_custom_field'])
+        
+        _logger.info("search_meli_product (multiple): seller_sku: "+str(seller_sku))
+        
         account = None
         account_filter = []
 
         if config.accounts:
             account = config.accounts[0]
             account_filter = [('connection_account','=',account.id)]
+        else:
+            _logger.error("search_meli_product (multiple): no account")
+            return []
 
         bindP = False
 
         if (meli_id_variation):
-            bindP = binding_obj.search([('conn_id','=',meli_id),('conn_variation_id','=',meli_id_variation)] + account_filter, limit=1)
+            bindP = binding_obj.search([('conn_id','=',meli_id),
+                                        ('conn_variation_id','=',meli_id_variation)] 
+                                        + account_filter, 
+                                        limit=1)
 
         if not bindP:
-            bindP = binding_obj.search([('conn_id','=',meli_id)] + account_filter, limit=1)
+            bindP = binding_obj.search([('conn_id','=',meli_id)] 
+                                        + account_filter,
+                                        limit=1)
 
         product_related = (bindP and bindP.product_id)
 
         if product_related:
-            return product_related
+            if check_sku:
+                if seller_sku and len(product_related)>0:
+                    if ( str(seller_sku) != str(product_related and product_related[0].default_code)):
+                        #force search by sku
+                        _logger.info("search_meli_product (multiple): binding found, but force check sku not passed: "+str(seller_sku))
+                        product_related = []
+            else:
+                return product_related
 
         #classic meli_oerp version:
         if (meli_id_variation):
@@ -199,23 +217,24 @@ class MercadoLibreOrder(models.Model):
         else:
             product_related = product_obj.search([('meli_id','=', meli_id)])
 
-        seller_sku = ('seller_sku' in meli_item and meli_item['seller_sku']) or ('seller_custom_field' in meli_item and meli_item['seller_custom_field'])
         if check_sku and seller_sku and product_related and len(product_related)>0:
             if ( str(seller_sku) != str(product_related and product_related[0].default_code)):
                 #force search by sku
+                _logger.info("search_meli_product (multiple): Master founded but force check sku not passed: "+str(seller_sku))
                 product_related = []
 
-        if ( len(product_related)==0 and ('seller_custom_field' in meli_item or 'seller_sku' in meli_item)):
+        if ( len(product_related)==0 and seller_sku):
 
             #1ST attempt "seller_sku" or "seller_custom_field"
-            seller_sku = ('seller_sku' in meli_item and meli_item['seller_sku']) or ('seller_custom_field' in meli_item and meli_item['seller_custom_field'])
             if (seller_sku):
+                _logger.info("search_meli_product (multiple): Search using seller_sku: "+str(seller_sku))
                 product_related = product_obj.search([('default_code','=',seller_sku)])
+                
 
             #2ND attempt only old "seller_custom_field"
             if (not product_related and 'seller_custom_field' in meli_item):
                 seller_sku = ('seller_custom_field' in meli_item and meli_item['seller_custom_field'])
-            if (seller_sku):
+                _logger.info("search_meli_product (multiple): Search using seller_custom_field: "+str(seller_sku))
                 product_related = product_obj.search([('default_code','=',seller_sku)])
 
             #TODO: 3RD attempt using barcode
@@ -223,7 +242,7 @@ class MercadoLibreOrder(models.Model):
             #   search using item attributes GTIN and SELLER_SKU
 
             if (len(product_related)):
-                _logger.info("order product related by seller_custom_field and default_code:"+str(seller_sku) )
+                _logger.info("order product related by seller_sku and default_code:"+str(seller_sku) )
 
                 if (len(product_related)>1):
                     product_related = product_related[0]
