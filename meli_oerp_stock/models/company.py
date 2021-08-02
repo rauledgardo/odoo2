@@ -71,10 +71,41 @@ class ResCompany(models.Model):
     #TODO:
     #si shipped que haga automaticamente ejecute la entrega
     #mercadolibre_shipped = fields.Boolean()
-    #mercadolibre_stock_filter_order_datetime = fields.Datetime("Order Closed Date (For shipping)")
-    #mercadolibre_stock_filter_order_datetime_to = fields.Datetime("Order Closed Date To (For shipping)")
 
     #procesar cuando es "Comprar"
     #mercadolibre_stock_sale_route_process = fields.Boolean(string="Routing Sale")
-    #producir
-    mercadolibre_stock_mrp_production_process = fields.Boolean(string="Process Manufacturing Productions",default=False,index=True)
+    mercadolibre_cron_get_shipments = fields.Boolean(string='Update shipments',help='Update shipments')
+
+    def cron_meli_shipments( self ):
+
+        _logger.info('company cron_meli_shipments() '+str(self))
+
+        company = self.env.user.company_id
+        warningobj = self.pool.get('warning')
+
+        apistate = self.env['meli.util'].get_new_instance(company)
+        if apistate.needlogin_state:
+            return True
+
+        _logger.info(str(company.name))
+        condition = company.mercadolibre_cron_get_shipments or (company.mercadolibre_stock_filter_order_datetime or company.mercadolibre_stock_filter_order_datetime_to)
+        if (condition):
+            _logger.info("company.mercadolibre_cron_get_shipments")
+            self.meli_query_get_shipments( meli=apistate, config=company)
+
+    def meli_query_get_shipments( self, meli=None, config=None ):
+
+        _logger.info("meli_query_get_shipments")
+        #recorrer ordenes y procesar entregas en funcion de los valores de
+        # mercadolibre_order_confirmation_delivery
+        # mercadolibre_order_confirmation_delivery_full
+        # mercadolibre_stock_filter_order_datetime
+        # mercadolibre_stock_filter_order_datetime_to
+        start_date = ( company.mercadolibre_stock_filter_order_datetime and [('closed_date','>',''+str(company.mercadolibre_stock_filter_order_datetime) )]) or []
+        end_date = ( company.mercadolibre_stock_filter_order_datetime_to and [('closed_date','<',''+str(company.mercadolibre_stock_filter_order_datetime_to) )]) or []
+        orders_in_range = self.env["mercadolibre.orders"].search( start_date + end_date )
+        if orders_in_range:
+            for morder in orders_in_range:
+                so = morder.sale_order
+                if so:
+                    so.confirm_ml_stock( meli=meli, config=config )

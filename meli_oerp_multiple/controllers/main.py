@@ -30,7 +30,7 @@ class MercadoLibre(MercadoLibre):
     @http.route(['/meli_notify','/meli_notify/<string:meli_login_id>'], type='json', auth='public')
     def meli_notify(self, meli_login_id=None, **kw):
 
-        _logger.info("Meli Notify Multiple: "+str(meli_login_id))
+        _logger.info("Meli Notify Multiple: /meli_notify/"+str(meli_login_id))
         meli_account = None
         data = json.loads(request.httprequest.data)
         _logger.info(data)

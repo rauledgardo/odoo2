@@ -563,10 +563,11 @@
             <field name="barcode"/>
             <field name="conn_id" string="MercadoLibre Id"/>
             <field name="conn_variation_id"  string="Variant Id"/>
+            <field name="stock" />
             <field name="meli_status"/>
             <field name="meli_sub_status"/>
             <field name="meli_permalink"/>
-            <field name="product_id"/>
+            <field name="product_id"/>            
             <field name="full_update" optional="hide"/>
             <field name="image_update" optional="hide"/>
             <field name="price_update" optional="hide"/>

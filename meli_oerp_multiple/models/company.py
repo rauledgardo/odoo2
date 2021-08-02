@@ -76,6 +76,22 @@ class ResCompany(models.Model):
 
         return result
 
+    def cron_meli_questions( self ):
+        _logger.info("meli_oerp_multiple >> cron_meli_questions")
+        company = self or self.env.user.company_ids or self.env.user.company_id
+        _logger.info("meli_oerp_multiple >> cron_meli_questions >> company:"+str(company))
+        result = []
+        for comp in company:
+            res = {}
+            for account in comp.mercadolibre_connections:
+
+                _logger.info('calling meli_query_get_questions for: ' +str(comp.name) + str(" >> ") + str(account.name))
+                res = account.meli_query_get_questions()
+                if (res):
+                    result.append(res)
+
+        return result
+
     def cron_meli_process( self ):
         _logger.info("company cron_meli_process need to check all accounts now")
         company = self or self.env.user.company_id

@@ -112,7 +112,7 @@ class MercadoLibreConnectionAccount(models.Model):
         company = (account and account.company_id) or self.env.user.company_id
         config = (account and account.configuration) or company
 
-        _logger.info("account >> meli_notifications")
+        _logger.info("account >> meli_notifications "+str(account.name))
 
         if (config.mercadolibre_process_notifications):
             return self.env['mercadolibre.notification'].fetch_lasts( data=data, company=company, account=account, meli=meli )
@@ -511,18 +511,28 @@ class MercadoLibreConnectionAccount(models.Model):
     def meli_query_get_questions(self):
 
         _logger.info("account >> meli_query_get_questions")
-        posting_obj = self.env['mercadolibre.posting']
-        #posting_ids = posting_obj.search(['|',('meli_status','=','active'),('meli_status','=','under_review')])
-        #_logger.info(posting_ids)
-        #if (posting_ids):
-        #    for posting in posting_ids:
-        #        posting.posting_query_questions()
+        for account in self:
+            company = account.company_id or self.env.user.company_id
+            config = account.configuration
 
-        #posting_ids = posting_obj.search(['&',('meli_status','!=','active'),('meli_status','!=','under_review')])
-        #_logger.info(posting_ids)
-        #if (posting_ids):
-        #    for posting in posting_ids:
-        #        posting.posting_query_questions()
+            _logger.info("account >> meli_query_get_questions >> "+str(account.name))
+
+            meli = self.env['meli.util'].get_new_instance( company, account )
+            if meli.need_login():
+                return meli.redirect_login()
+
+            productT_bind_ids = self.env['mercadolibre.product_template'].search([
+                ('connection_account', '=', account.id ),
+            ], order='id asc')
+
+            _logger.info("productT_bind_ids:"+str(productT_bind_ids))
+
+            if productT_bind_ids:
+                for bindT in productT_bind_ids:
+                    _logger.info("account >> meli_query_get_questions >> "+str(bindT.name))
+                    bindT.query_questions( meli=meli, config=config )
+
+
         return {}
 
     def meli_query_products(self):
@@ -907,6 +917,7 @@ class MercadoLibreConnectionAccount(models.Model):
                 if auto_commit:
                     self.env.cr.commit()
 
+        _logger.info('account.meli_update_remote_stock() ENDED '+str(account.name) + " " +str( datetime.now() ))
         return {}
 
     def meli_update_remote_stock_injobs(self, meli=False, notification=None):

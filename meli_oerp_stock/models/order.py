@@ -140,6 +140,18 @@ class SaleOrder(models.Model):
         _logger.info("delivery condition: "+str(condition))
         if (condition):
             self.meli_deliver( meli=meli, config=config)
+            
+        _logger.info("meli_oerp_stock confirm_ml_stock ended")
+
+    #try to update order before confirmation (quotation)
+    def confirm_ml( self, meli=None, config=None ):
+        
+        _logger.info("meli_oerp_stock confirm_ml")
+        
+        company = (config and 'company_id' in config._fields and config.company_id) or self.env.user.company_id
+        config = config or company
+
+        self.confirm_ml_stock( meli=meli, config=config )
 
         super(SaleOrder, self).confirm_ml( meli=meli, config=config )
 
