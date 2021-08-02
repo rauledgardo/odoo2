@@ -392,24 +392,24 @@ class product_product(models.Model):
         return "%s" % ( str(image.id) )
 
     def mercadolibre_bind_variation_id( self, account=None, meli_id=None, meli=None, rjson=None ):
-        
+
         #associate using SKU
         product = self
-        
+
         _logger.info("associate using SKU or combination")
-        
+
         meli_id_variation = False
-        
+
         if not rjson:
             return meli_id_variation
-    
+
         if ("variations" in rjson and len(rjson["variations"]) ):
-            
+
             for var in rjson["variations"]:
-                
+
                 sku = ("seller_sku" in var and var["seller_sku"]) or ("seller_custom_field" in var and var["seller_custom_field"]) or None
                 bcode = ("barcode" in var and var["barcode"]) or None
-                                
+
                 if sku and product.default_code:
                     #TODO: cap unsensitive comparison?
                     _logger.info("mercadolibre_bind_variation_id >> check sku and default_code: "+str(sku)+" vs." + str(product.default_code) )
@@ -418,17 +418,17 @@ class product_product(models.Model):
                         meli_id_variation = var["id"]
                         seller_sku = sku
                         barcode = bcode
-                    
+
                 if not sku or not product.default_code:
                     #check if combination is related to base product binded variant
                     _logger.info("mercadolibre_bind_variation_id >> check combination: "+str(product._combination())+" vs." + str(var) )
                     if (product._is_product_combination(var)):
                         meli_id_variation = var["id"]
                         _logger.info("mercadolibre_bind_variation_id >> meli_id_variation match: "+str(meli_id_variation)+" >> var: "+str(var) )
-                                            
+
             if not meli_id_variation:
                 _logger.error("mercadolibre_bind_variation_id >> meli_id_variation NOT match: "+str(meli_id_variation) )
-                
+
         else: #no variations
             sku = ("seller_sku" in rjson and rjson["seller_sku"]) or ("seller_custom_field" in rjson and rjson["seller_custom_field"])
             bcode = ("barcode" in rjson and rjson["barcode"])
@@ -437,7 +437,7 @@ class product_product(models.Model):
                 seller_sku = sku
                 barcode = bcode
                 meli_id_variation = None
-                
+
             if not seller_sku:
                 #abort binding (using Only SKU binding)
                 _logger.error(_("mercadolibre_bind_to >> Aborting binding product (using Only SKU: NO SKU) %s to %s, id: %s, var id: %s, sku: %s") % (product.display_name, account.name, str(meli_id), str(meli_id_variation),str(seller_sku)))
@@ -445,7 +445,7 @@ class product_product(models.Model):
                 meli_id_variation = "__undefined__"
 
         return meli_id_variation
-        
+
     def mercadolibre_bind_to( self, account, binding_product_tmpl_id=False, meli_id=None, meli_id_variation=None, meli=None, rjson=None, bind_only=False ):
         pv_bind = None
         _logger.info( "mercadolibre_bind_to >> product bind_only: " + str(bind_only)+" meli_id: "+str(meli_id)+" meli_id_variation: "+str(meli_id_variation) )
@@ -473,7 +473,7 @@ class product_product(models.Model):
             _logger.info("bind_only: "+str(bind_only))
             if (meli_id_variation==None and bind_only==True):
                 meli_id_variation = product.mercadolibre_bind_variation_id( account=account, meli_id=meli_id, meli=meli, rjson=rjson )
-                    
+
 
             meli_id_variation = meli_id_variation or (bind_only==False and meli_id and product.meli_id==meli_id and product.meli_id_variation)
             seller_sku = seller_sku or (bind_only==False and product.default_code) or ''
@@ -1560,7 +1560,7 @@ class product_product(models.Model):
                 if (product_tmpl.meli_pub_principal_variant.id == product.id):
                     #esta es la variante principal, si aun el producto no se publico
                     #preparamos las variantes
-                    
+
                     # product_json is Product Json from ML
                     if ( productjson and len(productjson["variations"]) ):
                         #ya hay variantes publicadas en ML
@@ -1583,7 +1583,7 @@ class product_product(models.Model):
                             #_logger.info("Variation to update!!")
                             #_logger.info(var_info)
                             var_product = product
-                            
+
                             for pvar in product_tmpl.product_variant_ids:
                                 if (pvar._is_product_combination(var_info)):
                                     var_product = pvar
@@ -1614,10 +1614,10 @@ class product_product(models.Model):
                                     if (pvar._is_product_combination(var_info)):
                                         var_attributes = pvar._update_sku_attribute( attributes=("attributes" in var_info and var_info["attributes"]), set_sku=config.mercadolibre_post_default_code )
                                         var_attributes and var_info.update({"attributes": var_attributes })
-                                        
+
                                         #body_varias se actualiza
                                         body_varias["variations"].append(var_info)
-                                        
+
                                         _logger.info("news:")
                                         _logger.info(var_info)
 
@@ -1652,12 +1652,12 @@ class product_product(models.Model):
                         del body['available_quantity']
                         #resbody = meli.put("/items/"+product.meli_id, body, {'access_token':meli.access_token})
                         return body
-                        
+
                         #_logger.debug(resbody.json())
                          #responsevar = meli.put("/items/"+product.meli_id, {"initial_quantity": product.meli_available_quantity, "available_quantity": product.meli_available_quantity }, {'access_token':meli.access_token})
                          #_logger.debug(responsevar)
                          #_logger.debug(responsevar.json())
-                        
+
                     else:
                         #first variations post
                         variations = product_tmpl._variations(config=config)
@@ -1684,7 +1684,7 @@ class product_product(models.Model):
                     for pic in body["pictures"]:
                         var_pics.append(pic['id'])
                 _logger.info("Single variation already posted, must update it")
-                
+
                 #update variations structure for: "attributes" (SELLER_SKU, GTIN), "stock", "price", and "pictures"
                 for ix in range(len(productjson["variations"]) ):
                     _logger.info("Variation to update!!")
@@ -1740,7 +1740,7 @@ class product_product(models.Model):
         if bind:
             bind.meli_title = bind.meli_title or bind.name
             _logger.info("bind.meli_title: "+str(bind.meli_title))
-            
+
         if bind_tpl:
             bind_tpl.meli_title = bind_tpl.meli_title or bind_tpl.name
             _logger.info("bind_tpl.meli_title: "+str(bind_tpl.meli_title))
@@ -1813,9 +1813,9 @@ class product_product(models.Model):
             response = meli.get("/items/%s" % str(meli_id), {'access_token':meli.access_token})
             if (response):
                 productjson = response.json()
-                
+
         #product_json is the data json Object from ML, use this data to update
-        
+
         #translate everything to be compatible with bindings parameters
         #.....
         #se traduce muchos product. por bind.
@@ -1968,10 +1968,19 @@ class product_product(models.Model):
             rebind_needed = bind_tpl.variant_bindings and product_tmpl.product_variant_ids and len(bind_tpl.variant_bindings) != len(product_tmpl.product_variant_ids)
             _logger.info("Rebind needed:"+str(rebind_needed))
             if force_meli_new_pub or rebind_needed:
-                _logger.info("Rebind needed or forced: force_meli_new_pub:"+str(force_meli_new_pub))                    
+                _logger.info("Rebind needed or forced: force_meli_new_pub:"+str(force_meli_new_pub))
                 bind_tpl.product_template_rebind()
             if "id" in rjson:
                 bind_tpl.copy_from_rjson( rjson=rjson, meli=meli )
+
+            stock = 0
+            bind_tpl.price = bind_tpl.price or product_tmpl.meli_price
+            for bindv in bind_tpl.variant_bindings:
+                bindv.meli_available_quantity = (bindv.product_id and bindv.product_id.meli_available_quantity) or 0
+                bindv.price = bind_tpl.price
+                bindv.stock = bindv.meli_available_quantity
+                stock+= bindv.stock
+            bind_tpl.stock = stock
             #bind.copy_from_rjson( rjson=rjson, meli=meli )
         else:
             for bindT in product_tmpl.mercadolibre_bindings:
@@ -1979,11 +1988,20 @@ class product_product(models.Model):
                     rebind_needed = target.meli_pub_as_variant and bindT.variant_bindings and product_tmpl.product_variant_ids and len(bindT.variant_bindings) != len(product_tmpl.product_variant_ids)
                     _logger.info("Rebind needed:"+str(rebind_needed))
                     if force_meli_new_pub or rebind_needed:
-                        _logger.info("Rebind needed or forced: force_meli_new_pub:"+str(force_meli_new_pub))                    
+                        _logger.info("Rebind needed or forced: force_meli_new_pub:"+str(force_meli_new_pub))
                         bindT.product_template_rebind()
                     if "id" in rjson:
                         bindT.copy_from_rjson( rjson=rjson, meli=meli )
-            
+                    stock = 0
+                    bindT.price = bindT.price or product_tmpl.meli_price
+                    for bindv in bindT.variant_bindings:
+                        bindv.meli_available_quantity = (bindv.product_id and bindv.product_id.meli_available_quantity) or 0
+                        bindv.stock = bindv.meli_available_quantity
+                        bindv.meli_price = bindv.product_id.meli_price
+                        bindv.price = bindv.meli_price
+                        stock+= bindv.stock
+                    bindT.stock = stock
+
 
         #raise ValidationError(str(rjson)+str(body))
 
@@ -2492,7 +2510,7 @@ class product_product(models.Model):
 
         if (rjson and "shipping" in rjson and "logistic_type" in rjson["shipping"]):
             meli_shipping_logistic_type = rjson["shipping"]["logistic_type"]
-                        
+
             if meli_id==product.meli_id:
                 #update product meli_shipping_logistic_type if meli_id binding match the base product
                 product.meli_shipping_logistic_type = meli_shipping_logistic_type

@@ -86,7 +86,26 @@
                   </tree>
                 </field-->
                 <separator string="Variant bindings" colspan="1"/>
-                <field name="variant_bindings"/>
+                <field name="variant_bindings">
+                  <tree create="0" edit="1" delete="0" default_order='name asc'>
+                    <field name="product_id"/>
+                    <field name="name"/>
+                    <field name="conn_id"/>
+                    <field name="conn_variation_id"/>
+                    <field name="sku"/>
+                    <field name="barcode" optional="hide"/>
+                    <field name="meli_status"/>
+                    <field name="meli_sub_status" optional="hide"/>
+                    <field name="stock"/>
+                    <field name="price"/>
+
+                    <field name="meli_permalink" optional="hide"/>
+                    <field name="full_update" optional="hide"/>
+                    <field name="image_update" optional="hide"/>
+                    <field name="price_update" optional="hide"/>
+                    <field name="stock_update" optional="hide"/>
+                  </tree>
+                </field>
                 <separator string="Descripcion del producto en ML" colspan="1"/>
                 <group name="Basic description">
                   <field name="meli_title" />
@@ -567,7 +586,7 @@
             <field name="meli_status"/>
             <field name="meli_sub_status"/>
             <field name="meli_permalink"/>
-            <field name="product_id"/>            
+            <field name="product_id"/>
             <field name="full_update" optional="hide"/>
             <field name="image_update" optional="hide"/>
             <field name="price_update" optional="hide"/>

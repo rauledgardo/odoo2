@@ -249,8 +249,15 @@ class MercadoLibreConnectionNotification(models.Model):
                     _logger.info(str(morder))
                     pdata = { "id": False, "order_json": ojson }
 
+                    so = None
                     if (morder and len(morder)):
                         pdata["id"] =  morder.id
+                        so = morder.sale_order or None
+                        #Fix auto seller team assignation, if the team company doesnt match the account company  (access issues)
+                        if so:
+                            so.meli_fix_team( meli=meli, config=config )
+
+
 
                     rsjson = morder.orders_update_order_json( data=pdata, meli=meli, config=config )
                     _logger.info("meli_oerp_multiple >> _process_notification_order >> orders_update_order_json >> rsjson: "+str(rsjson))

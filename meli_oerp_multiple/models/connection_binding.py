@@ -172,7 +172,7 @@ class MercadoLibreConnectionBindingProductTemplate(models.Model):
                         if variant.meli_id:
                             #binding is anew, set with last meli_id if we can
                             meli_id = variant.meli_id
-                            meli_price = variant.meli_price
+                            meli_price = variant.meli_price or productT.meli_price
                             meli_available_quantity = variant.meli_available_quantity
 
                             bindT.conn_id = meli_id
@@ -181,7 +181,7 @@ class MercadoLibreConnectionBindingProductTemplate(models.Model):
 
                             for bind in bindT.variant_bindings:
                                 bind.conn_id = meli_id
-                                bind.price = meli_price
+                                bind.price = meli_price or bind.price
                     #continue;
                 elif variant_principal and meli_id!=variant_principal.meli_id:
                     _logger.info("TODO: Check this bind how to post it!!! Republish as new with variants, meli_id: "+str(meli_id)+" variant_principal.meli_id: "+str(variant_principal.meli_id))
@@ -329,12 +329,16 @@ class MercadoLibreConnectionBindingProductTemplate(models.Model):
             account = bindT.connection_account
             product = bindT.product_tmpl_id
             meli_id = bindT.conn_id
+            stock = 0
 
             if not meli:
                 meli = self.env['meli.util'].get_new_instance( account.company_id, account )
 
             for bindv in bindT.variant_bindings:
                 bindv.product_post_stock(meli=meli)
+                stock+= (bindv.stock or bindv.meli_available_quantity)
+
+            bindT.stock = stock
 
         return ret
 
