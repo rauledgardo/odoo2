@@ -58,7 +58,7 @@ class SaleOrder(models.Model):
 
     def meli_deliver( self, meli=None, config=None, data=None):
         _logger.info("meli_deliver")
-
+        res= {}
         if "mercadolibre_stock_mrp_production_process" in config._fields and config.mercadolibre_stock_mrp_production_process:
             self.meli_produce( meli=meli, config=config, data=data )
 
@@ -72,12 +72,23 @@ class SaleOrder(models.Model):
                             _logger.info(pop)
                             if (pop.qty_done==0.0 and pop.product_qty>=0.0):
                                 pop.qty_done = pop.product_qty
-                        _logger.info("do_new_transfer")
+                        _logger.info("validating")
                         try:
                             spick.button_validate()
                             spick.action_done()
+                            continue;
                         except Exception as e:
-                            _logger.error("stock pick button_validate error"+str(e))
+                            _logger.error("stock pick button_validate/action_done error"+str(e))
+                            res = { 'error': str(e) }
+                            pass;
+                        
+                        try:
+                            spick.action_assign()
+                            spick.button_validate()
+                            spick.action_done()
+                            continue;
+                        except Exception as e:
+                            _logger.error("stock pick action_assign/button_validate/action_done error"+str(e))
                             res = { 'error': str(e) }
                             pass;
 
@@ -118,27 +129,36 @@ class SaleOrder(models.Model):
                 wh_id = config.mercadolibre_stock_warehouse_full
         return wh_id
 
-    #try to update order before confirmation (quotation)
-    def confirm_ml( self, meli=None, config=None ):
-        _logger.info("meli_oerp_stock confirm_ml")
+    def confirm_ml_stock( self, meli=None, config=None, force=False ):
+        
+        _logger.info("meli_oerp_stock confirm_ml_stock")
         company = (config and 'company_id' in config._fields and config.company_id) or self.env.user.company_id
         config = config or company
-
+        
+        forcing_date = False
+        forcing_date = config and config.mercadolibre_stock_filter_order_datetime and self.meli_date_closed >= config.mercadolibre_stock_filter_order_datetime
+        forcing_date = forcing_date and config.mercadolibre_stock_filter_order_datetime_to and self.meli_date_closed <= config.mercadolibre_stock_filter_order_datetime_to
+        
+        force = force or forcing_date
+        _logger.info("Forcing shipment validation: "+str(force))
+        
         self._meli_order_update( config=config )
 
         delinofull = "mercadolibre_order_confirmation_delivery" in config._fields and config.mercadolibre_order_confirmation_delivery
         delifull = "mercadolibre_order_confirmation_delivery_full" in config._fields and config.mercadolibre_order_confirmation_delivery_full
+        shipped_or_delivered = self.meli_shipment and ("delivered" in self.meli_shipment.status or "shipped" in self.meli_shipment.status)
+        _logger.info("shipped_or_delivered:"+str(shipped_or_delivered))
 
         condition = self.meli_shipment_logistic_type=="fulfillment" and delifull and "paid_confirm_deliver" in delifull
-        condition = condition or (self.meli_shipment_logistic_type=="" and delinofull and  "paid_confirm_deliver" in delinofull)
-
-        condition = condition or (self.meli_shipment_logistic_type=="fulfillment" and self.meli_shipment and "delivered" in self.meli_shipment.status and delifull and "paid_confirm_shipped_deliver" in delifull)
-        condition = condition or (self.meli_shipment_logistic_type=="" and self.meli_shipment and  "delivered" in self.meli_shipment.status and delinofull and  "paid_confirm_shipped_deliver" in delinofull )
+        condition = condition or (not self.meli_shipment_logistic_type and delinofull and  "paid_confirm_deliver" in delinofull)
+        
+        condition = condition or (self.meli_shipment_logistic_type=="fulfillment" and shipped_or_delivered and delifull and "paid_confirm_shipped_deliver" in delifull)
+        condition = condition or (self.meli_shipment_logistic_type=="" and shipped_or_delivered and delinofull and  "paid_confirm_shipped_deliver" in delinofull )
         #last check:
         condition = condition and ("paid" in self.meli_status) and self.state in ['sale','done']
 
         _logger.info("delivery condition: "+str(condition))
-        if (condition):
+        if (condition or force):
             self.meli_deliver( meli=meli, config=config)
             
         _logger.info("meli_oerp_stock confirm_ml_stock ended")

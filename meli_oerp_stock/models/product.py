@@ -186,6 +186,7 @@ class product_product(models.Model):
                                     stock_material_max = stock_material
                                     new_meli_available_quantity = stock_material_max
                                     _logger.info("stock based on minimum material available / " +str(bom_line.product_qty)+ ": " + str(new_meli_available_quantity))
+
         return new_meli_available_quantity
 
     def product_update_stock(self, stock=False, meli=False, config=None):

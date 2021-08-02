@@ -56,11 +56,13 @@ class ResCompany(models.Model):
                                                 help='(FULL) Acción al confirmar una orden o pedido de venta')
 
     #TODO: process
-    mercadolibre_stock_filter_order_datetime = fields.Datetime("Order Closed Date (For shipping)")
-    mercadolibre_stock_filter_order_datetime_to = fields.Datetime("Order Closed Date To (For shipping)")
+    mercadolibre_cron_get_shipments = fields.Boolean(string='Force shipment validation',help='Force shipment validation')
+    mercadolibre_stock_filter_order_datetime = fields.Datetime("Order Closed Date (Forcing shipment validation)")
+    mercadolibre_stock_filter_order_datetime_to = fields.Datetime("Order Closed Date To (Forcing shipment validation)")
 
     #TODO: activate
     mercadolibre_stock_virtual_available = fields.Selection([("virtual","Virtual (quantity-reserved)"),("theoretical","En mano (quantity)")],default='virtual')
+    #mercadolibre_stock_virtual_available = fields.Selection([("virtual","Virtual Available"),("virtual_reserved","Virtual ( on hand - reserved )"),("theoretical","En mano (quantity)")],default='virtual')
 
     #TODO: activate
     #mercadolibre_stock_sku_regex = fields.Char(string="Sku Regex")
@@ -74,7 +76,6 @@ class ResCompany(models.Model):
 
     #procesar cuando es "Comprar"
     #mercadolibre_stock_sale_route_process = fields.Boolean(string="Routing Sale")
-    mercadolibre_cron_get_shipments = fields.Boolean(string='Update shipments',help='Update shipments')
 
     def cron_meli_shipments( self ):
 
@@ -101,11 +102,12 @@ class ResCompany(models.Model):
         # mercadolibre_order_confirmation_delivery_full
         # mercadolibre_stock_filter_order_datetime
         # mercadolibre_stock_filter_order_datetime_to
-        start_date = ( company.mercadolibre_stock_filter_order_datetime and [('closed_date','>',''+str(company.mercadolibre_stock_filter_order_datetime) )]) or []
-        end_date = ( company.mercadolibre_stock_filter_order_datetime_to and [('closed_date','<',''+str(company.mercadolibre_stock_filter_order_datetime_to) )]) or []
+        start_date = ( config.mercadolibre_stock_filter_order_datetime and [('date_closed','>=',''+str(config.mercadolibre_stock_filter_order_datetime) )]) or []
+        end_date = ( config.mercadolibre_stock_filter_order_datetime_to and [('date_closed','<=',''+str(config.mercadolibre_stock_filter_order_datetime_to) )]) or []
         orders_in_range = self.env["mercadolibre.orders"].search( start_date + end_date )
-        if orders_in_range:
+        _logger.info("orders_in_range:"+str(orders_in_range)+" start_date:"+str(start_date)+" end_date:"+str(end_date))
+        if orders_in_range and start_date and end_date:
             for morder in orders_in_range:
                 so = morder.sale_order
                 if so:
-                    so.confirm_ml_stock( meli=meli, config=config )
+                    so.confirm_ml_stock( meli=meli, config=config, force=True )
