@@ -6,6 +6,7 @@ import logging
 from . import versions
 from .versions import *
 
+_logger = logging.getLogger(__name__)
 #https://api.mercadolibre.com/questions/search?item_id=MLA508223205
 
 class mercadolibre_questions(models.Model):
