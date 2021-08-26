@@ -133,7 +133,7 @@ class SaleOrder(models.Model):
         _logger.info("meli_oerp_accounting meli_create_invoice ended.")
 
     def confirm_ml( self, meli=None, config=None ):
-        _logger.info("meli_oerp_accounting confirm_ml")
+        _logger.info("meli_oerp_accounting confirm_ml: config:"+str(config and config.name))
         company = (config and 'company_id' in config._fields and config.company_id) or self.env.user.company_id
         config = config or company
         try:
@@ -180,7 +180,7 @@ class SaleOrder(models.Model):
             pass
         _logger.info("meli_oerp_accounting confirm_ml registering payments ended.")
 
-        if "_invoice" in config.mercadolibre_order_confirmation:
+        if config and config.mercadolibre_order_confirmation and "_invoice" in config.mercadolibre_order_confirmation:
             self.meli_create_invoice( meli=meli, config=config )
 
         _logger.info("meli_oerp_accounting confirm_ml ended.")
